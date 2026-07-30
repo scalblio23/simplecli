@@ -16,11 +16,12 @@
   --c-error:  #ff5252;
   --c-dim:    #444;
   --c-card:   transparent;
+  --c-margin: #0d0d0d;
   --font-size: 15px;
 }
 
 body {
-  background: var(--c-bg);
+  background: var(--c-margin);
   color: #c0c0c0;
   font-family: 'Courier New', Courier, monospace;
   font-size: var(--font-size);
@@ -35,6 +36,7 @@ body {
   height: 100dvh;
   display: flex;
   flex-direction: column;
+  background: var(--c-bg);
   border-left: 1px solid var(--c-border);
   border-right: 1px solid var(--c-border);
   overflow: hidden;
@@ -343,6 +345,7 @@ body {
 
     <!-- Colors -->
     <div class="tab-content" id="tab-colors">
+      <div class="row"><label>Margins</label>          <input type="color" id="cp-margin"></div>
       <div class="row"><label>Background</label>      <input type="color" id="cp-bg"></div>
       <div class="row"><label>Border / chrome</label> <input type="color" id="cp-border"></div>
       <div class="row"><label>Accent / system</label> <input type="color" id="cp-accent"></div>
@@ -366,7 +369,7 @@ const SKINS = [
   {
     id: 'hermes-default',
     name: 'Hermes Default',
-    colors: { bg: '#000000', border: '#f5a623', accent: '#ff6b35', you: '#4ade80', agent: '#ffd700', error: '#ff4444', card: '#0A1B1C' },
+    colors: { bg: '#000000', border: '#f5a623', accent: '#ff6b35', you: '#4ade80', agent: '#ffd700', error: '#ff4444', card: '#0A1B1C', margin: '#0A1B1C' },
     fontSize: 15
   },
   {
@@ -435,7 +438,7 @@ const KEY = 'hermes-cfg'
 const DEF = {
   url: '', apiKey: '', agentName: 'Hermes', modelName: 'hermes', metaToken: '', notionToken: '',
   fontSize: 15, activeSkin: 'cyber',
-  colors: { bg: '#0d0d0d', border: '#00e5ff', accent: '#e040fb', you: '#69f0ae', agent: '#ffff00', error: '#ff5252', card: 'transparent' }
+  colors: { bg: '#0d0d0d', border: '#00e5ff', accent: '#e040fb', you: '#69f0ae', agent: '#ffff00', error: '#ff5252', card: 'transparent', margin: '#0d0d0d' }
 }
 function loadCfg() {
   try {
@@ -457,7 +460,8 @@ function applyTheme() {
   s.setProperty('--c-you',    cfg.colors.you)
   s.setProperty('--c-agent',  cfg.colors.agent)
   s.setProperty('--c-error',  cfg.colors.error)
-  s.setProperty('--c-card',   cfg.colors.card || 'transparent')
+  s.setProperty('--c-card',   cfg.colors.card   || 'transparent')
+  s.setProperty('--c-margin', cfg.colors.margin || cfg.colors.bg)
   s.setProperty('--font-size', cfg.fontSize + 'px')
 }
 applyTheme()
@@ -637,6 +641,7 @@ function applySkin(skin) {
 
 function syncColorPickers() {
   const c = cfg.colors
+  document.getElementById('cp-margin').value = c.margin || c.bg
   document.getElementById('cp-bg').value     = c.bg
   document.getElementById('cp-border').value = c.border
   document.getElementById('cp-accent').value = c.accent
@@ -669,6 +674,7 @@ function closePanel() {
   cfg.agentName = document.getElementById('cp-name').value.trim() || 'Hermes'
   cfg.metaToken   = document.getElementById('cp-meta').value.trim()
   cfg.notionToken = document.getElementById('cp-notion').value.trim()
+  cfg.colors.margin = document.getElementById('cp-margin').value
   cfg.colors.bg     = document.getElementById('cp-bg').value
   cfg.colors.border = document.getElementById('cp-border').value
   cfg.colors.accent = document.getElementById('cp-accent').value
@@ -682,7 +688,7 @@ function closePanel() {
   inputEl.focus()
 }
 
-;['bg','border','accent','you','agent','error'].forEach(k => {
+;['margin','bg','border','accent','you','agent','error'].forEach(k => {
   document.getElementById('cp-' + k).addEventListener('input', e => {
     cfg.colors[k] = e.target.value; cfg.activeSkin = 'custom'; applyTheme()
   })
