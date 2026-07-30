@@ -208,8 +208,8 @@ body {
   width: 44px; height: 28px; border: 1px solid #333; background: #0d0d0d;
   cursor: pointer; padding: 2px; border-radius: 2px; flex-shrink: 0;
 }
+.masked { -webkit-text-security: disc; }
 .row input[type="text"],
-.row input[type="password"],
 .row input[type="number"] {
   background: #1a1a1a; border: 1px solid #333; color: #c0c0c0;
   font-family: inherit; font-size: 0.82em; padding: 5px 8px;
@@ -264,7 +264,7 @@ body {
     </div>
     <div class="auth-field">
       <label>PASSWORD</label>
-      <input type="password" id="auth-pass" autocomplete="new-password" placeholder="••••••••">
+      <input type="text" id="auth-pass" class="masked" autocomplete="off" placeholder="••••••••">
     </div>
     <button id="auth-btn">CONNECT</button>
     <div id="auth-error"></div>
@@ -311,7 +311,7 @@ body {
       <div class="row">
         <label>API Key</label>
         <div class="pw-wrap">
-          <input type="password" id="cp-apikey" placeholder="••••••••" autocomplete="new-password">
+          <input type="text" id="cp-apikey" class="masked" placeholder="••••••••" autocomplete="off">
           <button class="pw-toggle" onclick="togglePw('cp-apikey',this)">👁</button>
         </div>
       </div>
@@ -326,21 +326,21 @@ body {
       <div class="row">
         <label>Meta Access Token</label>
         <div class="pw-wrap">
-          <input type="password" id="cp-meta" placeholder="EAA…" autocomplete="new-password">
+          <input type="text" id="cp-meta" class="masked" placeholder="EAA…" autocomplete="off">
           <button class="pw-toggle" onclick="togglePw('cp-meta',this)">👁</button>
         </div>
       </div>
       <div class="row">
         <label>Notion API Key</label>
         <div class="pw-wrap">
-          <input type="password" id="cp-notion" placeholder="secret_…" autocomplete="new-password">
+          <input type="text" id="cp-notion" class="masked" placeholder="secret_…" autocomplete="off">
           <button class="pw-toggle" onclick="togglePw('cp-notion',this)">👁</button>
         </div>
       </div>
       <div class="row">
         <label>Calendly Token</label>
         <div class="pw-wrap">
-          <input type="password" id="cp-calendly" placeholder="eyJ…" autocomplete="new-password">
+          <input type="text" id="cp-calendly" class="masked" placeholder="eyJ…" autocomplete="off">
           <button class="pw-toggle" onclick="togglePw('cp-calendly',this)">👁</button>
         </div>
       </div>
@@ -606,8 +606,8 @@ if (isLoggedIn()) { hideLogin(); boot() } else { showLogin() }
 // ── Settings panel ───────────────────────────────────────────────────────────
 function togglePw(id, btn) {
   const el = document.getElementById(id)
-  el.type = el.type === 'password' ? 'text' : 'password'
-  btn.textContent = el.type === 'password' ? '👁' : '🙈'
+  el.classList.toggle('masked')
+  btn.textContent = el.classList.contains('masked') ? '👁' : '🙈'
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
