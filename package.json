@@ -1,0 +1,19 @@
+{
+  "name": "hermes-cli",
+  "version": "1.0.0",
+  "description": "CLI to control your Hermes agent on Railway",
+  "type": "module",
+  "bin": {
+    "hermes": "./bin/hermes.js"
+  },
+  "scripts": {
+    "start": "node bin/hermes.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "inquirer": "^9.2.0"
+  }
+}
