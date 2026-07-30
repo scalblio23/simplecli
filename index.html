@@ -259,14 +259,16 @@ body {
 
 /* ── Input ── */
 #input-wrap {
-  flex-shrink: 0; display: flex; align-items: center;
+  flex-shrink: 0; display: flex; align-items: flex-end;
   padding: 10px 16px 48px; border-top: 1px solid #1a1a1a; gap: 8px;
 }
-#prompt { color: var(--c-you); flex-shrink: 0; }
+#prompt { color: var(--c-you); flex-shrink: 0; padding-bottom: 1px; }
 #input {
   flex: 1; background: transparent; border: none; outline: none;
   color: var(--c-you); font-family: inherit; font-size: inherit;
   caret-color: var(--c-you); caret-width: 3px;
+  resize: none; overflow: hidden; line-height: 1.6;
+  min-height: 1.6em; max-height: 12em; padding: 0;
 }
 #input:disabled { opacity: 0.4; }
 
@@ -379,7 +381,7 @@ body {
 
 <div id="input-wrap">
   <span id="prompt">›</span>
-  <input id="input" type="text" autocomplete="off" spellcheck="false" autofocus placeholder="type a message or /help">
+  <textarea id="input" rows="1" autocomplete="off" spellcheck="false" autofocus placeholder="type a message or /help"></textarea>
 </div>
 </div><!-- /#app -->
 
@@ -997,10 +999,17 @@ function renderSessions() {
 document.getElementById('new-session-btn').addEventListener('click', newSession)
 
 // ── Input ─────────────────────────────────────────────────────────────────────
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto'
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 192) + 'px'
+})
+
 let busy = false
 inputEl.addEventListener('keydown', async e => {
-  if (e.key !== 'Enter' || busy) return
-  const text = inputEl.value.trim(); if (!text) return; inputEl.value = ''
+  if (e.key !== 'Enter' || e.shiftKey || busy) return
+  e.preventDefault()
+  const text = inputEl.value.trim(); if (!text) return
+  inputEl.value = ''; inputEl.style.height = 'auto'
 
   if (text === '/help') {
     dim(''); dim('  Use the buttons at the top: SETTINGS · SKINS · COLORS · CLEAR'); dim(''); return
