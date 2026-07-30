@@ -30,7 +30,7 @@ body {
 }
 
 #app {
-  width: calc(100% - 48px);
+  width: calc(100% - 24px);
   max-width: 1400px;
   margin: 0 auto;
   height: 100dvh;
@@ -175,7 +175,8 @@ body {
 #prompt { color: var(--c-you); flex-shrink: 0; }
 #input {
   flex: 1; background: transparent; border: none; outline: none;
-  color: var(--c-you); font-family: inherit; font-size: inherit; caret-color: var(--c-you);
+  color: var(--c-you); font-family: inherit; font-size: inherit;
+  caret-color: var(--c-you); caret-width: 3px;
 }
 #input:disabled { opacity: 0.4; }
 
