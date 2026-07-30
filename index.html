@@ -15,6 +15,7 @@
   --c-agent:  #ffff00;
   --c-error:  #ff5252;
   --c-dim:    #444;
+  --c-card:   transparent;
   --font-size: 15px;
 }
 
@@ -121,6 +122,35 @@ body {
 .error .prefix, .error .text { color: var(--c-error); }
 .dim .text { color: var(--c-dim); font-size: 0.85em; }
 .logo .text { color: var(--c-agent); line-height: 1.2; font-size: 0.78em; }
+
+/* ── Message cards ── */
+.msg-card {
+  border: 1px solid var(--c-border);
+  background: var(--c-card);
+  padding: 12px 16px;
+  margin: 6px 0 2px;
+}
+.msg-card .line { line-height: 1.7; }
+.banner-card {
+  border: 1px solid var(--c-border);
+  background: var(--c-card);
+  padding: 14px 16px 10px;
+  margin: 4px 0 8px;
+}
+.banner-card pre {
+  color: var(--c-dim);
+  font-size: 0.85em;
+  font-family: inherit;
+  white-space: pre-wrap;
+  line-height: 1.65;
+  margin: 0;
+}
+.err-card {
+  border: 1px solid var(--c-error);
+  background: var(--c-card);
+  padding: 10px 16px;
+  margin: 4px 0;
+}
 
 #typing { display: none; color: var(--c-dim); padding: 4px 16px; font-size: 0.8em; }
 #typing.show { display: block; }
@@ -317,7 +347,7 @@ const SKINS = [
   {
     id: 'hermes-default',
     name: 'Hermes Default',
-    colors: { bg: '#000000', border: '#0A1B1C', accent: '#ff6b35', you: '#4ade80', agent: '#ffd700', error: '#ff4444' },
+    colors: { bg: '#000000', border: '#f5a623', accent: '#ff6b35', you: '#4ade80', agent: '#ffd700', error: '#ff4444', card: '#0A1B1C' },
     fontSize: 15
   },
   {
@@ -386,7 +416,7 @@ const KEY = 'hermes-cfg'
 const DEF = {
   url: '', apiKey: '', agentName: 'Hermes', modelName: 'hermes', metaToken: '',
   fontSize: 15, activeSkin: 'cyber',
-  colors: { bg: '#0d0d0d', border: '#00e5ff', accent: '#e040fb', you: '#69f0ae', agent: '#ffff00', error: '#ff5252' }
+  colors: { bg: '#0d0d0d', border: '#00e5ff', accent: '#e040fb', you: '#69f0ae', agent: '#ffff00', error: '#ff5252', card: 'transparent' }
 }
 function loadCfg() {
   try {
@@ -408,6 +438,7 @@ function applyTheme() {
   s.setProperty('--c-you',    cfg.colors.you)
   s.setProperty('--c-agent',  cfg.colors.agent)
   s.setProperty('--c-error',  cfg.colors.error)
+  s.setProperty('--c-card',   cfg.colors.card || 'transparent')
   s.setProperty('--font-size', cfg.fontSize + 'px')
 }
 applyTheme()
@@ -429,8 +460,29 @@ function addLine(type, prefix, text, showTime) {
   feed.appendChild(div); feed.scrollTop = feed.scrollHeight
 }
 const sys = t => addLine('system', '→', t)
-const err = t => addLine('error',  '✗', t)
 const dim = t => addLine('dim',    '',  t)
+
+function addCard(type, prefix, text, showTime) {
+  const card = document.createElement('div'); card.className = 'msg-card'
+  const inner = document.createElement('div'); inner.className = 'line ' + type
+  const p = document.createElement('span'); p.className = 'prefix'; p.textContent = prefix
+  const t = document.createElement('span'); t.className = 'text';   t.textContent = text
+  inner.appendChild(p); inner.appendChild(t)
+  if (showTime) {
+    const ts = document.createElement('span'); ts.className = 'ts'
+    ts.textContent = new Date().toLocaleTimeString(); inner.appendChild(ts)
+  }
+  card.appendChild(inner); feed.appendChild(card); feed.scrollTop = feed.scrollHeight
+}
+
+function err(t) {
+  const card = document.createElement('div'); card.className = 'err-card'
+  const inner = document.createElement('div'); inner.className = 'line error'
+  const p = document.createElement('span'); p.className = 'prefix'; p.textContent = '✗'
+  const tx = document.createElement('span'); tx.className = 'text'; tx.textContent = t
+  inner.appendChild(p); inner.appendChild(tx); card.appendChild(inner)
+  feed.appendChild(card); feed.scrollTop = feed.scrollHeight
+}
 
 // ── Banner ───────────────────────────────────────────────────────────────────
 const LOGO_ART = [
@@ -466,35 +518,31 @@ function addGradientLogo() {
 
 function showBanner(info) {
   addGradientLogo()
-  dim('')
-  dim('  ⚡ Nous Research · Messenger of the Digital Gods')
+  const card = document.createElement('div'); card.className = 'banner-card'
+  const pre  = document.createElement('pre')
+  const lines = ['  ⚡ Nous Research · Messenger of the Digital Gods', '']
   if (info) {
     const modelList  = info.models?.data?.map(m => m.id).join(', ') || '—'
     const toolList   = Array.isArray(info.tools)  ? info.tools  : (info.tools?.data  ?? null)
     const skillList  = Array.isArray(info.skills) ? info.skills : (info.skills?.data ?? null)
     const toolCount  = toolList  ? toolList.length  : '?'
     const skillCount = skillList ? skillList.length : '?'
-    dim(`  Model: ${modelList}`)
-    dim('')
+    lines.push(`  Model: ${modelList}`, '')
     if (toolList && toolList.length > 0) {
-      dim(`  · Available Tools (${toolCount})`)
-      toolList.slice(0, 8).forEach(t => dim(`      – ${t.name ?? t.id ?? t}`))
-      if (toolList.length > 8) dim(`      … and ${toolList.length - 8} more`)
-    } else { dim(`  · Available Tools (${toolCount})`) }
+      lines.push(`  · Available Tools (${toolCount})`)
+      toolList.slice(0, 8).forEach(t => lines.push(`      – ${t.name ?? t.id ?? t}`))
+      if (toolList.length > 8) lines.push(`      … and ${toolList.length - 8} more`)
+    } else { lines.push(`  · Available Tools (${toolCount})`) }
     if (skillList && skillList.length > 0) {
-      dim(`  · Available Skills (${skillCount})`)
-      skillList.slice(0, 8).forEach(s => dim(`      – ${s.name ?? s.id ?? s}`))
-    } else { dim(`  · Available Skills (${skillCount})`) }
-    dim('')
-    dim(`  ${toolCount} tools · ${skillCount} skills · /help for commands`)
+      lines.push(`  · Available Skills (${skillCount})`)
+      skillList.slice(0, 8).forEach(s => lines.push(`      – ${s.name ?? s.id ?? s}`))
+    } else { lines.push(`  · Available Skills (${skillCount})`) }
+    lines.push('', `  ${toolCount} tools · ${skillCount} skills · /help for commands`)
   } else {
-    dim('')
-    dim('  · Available Tools')
-    dim('  · Available Skills')
-    dim('')
-    dim('  /help for commands')
+    lines.push('  · Available Tools', '  · Available Skills', '', '  /help for commands')
   }
-  dim('')
+  pre.textContent = lines.join('\n')
+  card.appendChild(pre); feed.appendChild(card); feed.scrollTop = feed.scrollHeight
 }
 
 async function fetchInfo() {
@@ -548,7 +596,7 @@ function buildSkins() {
     const card = document.createElement('div')
     card.className = 'skin-card' + (cfg.activeSkin === skin.id ? ' active' : '')
     const swatches = document.createElement('div'); swatches.className = 'skin-swatches'
-    Object.values(skin.colors).forEach(hex => {
+    Object.entries(skin.colors).filter(([k]) => k !== 'card').forEach(([, hex]) => {
       const s = document.createElement('div'); s.className = 'swatch'; s.style.background = hex
       swatches.appendChild(s)
     })
@@ -655,7 +703,7 @@ inputEl.addEventListener('keydown', async e => {
   busy = true; inputEl.disabled = true; typingEl.classList.add('show')
   try {
     const reply = await sendMsg(text)
-    addLine('agent', cfg.agentName + ' ›', reply, true)
+    addCard('agent', cfg.agentName + ' ›', reply, true)
   } catch (e) { err(e.message) }
   finally { busy = false; inputEl.disabled = false; typingEl.classList.remove('show'); inputEl.focus() }
 })
