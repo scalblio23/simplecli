@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed')
 
-  const { message, url, apiKey, modelName, metaToken, notionToken, calendlyToken } = req.body ?? {}
+  const { message, history, url, apiKey, modelName, metaToken, notionToken, calendlyToken } = req.body ?? {}
   if (!message) return res.status(400).json({ error: 'message is required' })
 
   const base = (url || process.env.HERMES_URL || '').trim().replace(/\/$/, '')
@@ -9,6 +9,20 @@ export default async function handler(req, res) {
 
   if (!base) return res.status(400).json({ error: 'No server URL set. Use /url.' })
   if (!key)  return res.status(401).json({ error: 'No API key set. Use /apikey.' })
+
+  const systemMessages = [
+    ...(metaToken    ? [{ role: 'system', content: `Meta Access Token: ${metaToken}` }]       : []),
+    ...(notionToken  ? [{ role: 'system', content: `Notion API Key: ${notionToken}` }]         : []),
+    ...(calendlyToken ? [{ role: 'system', content: `Calendly API Token: ${calendlyToken}` }] : []),
+  ]
+
+  // Build full conversation: system creds + prior history + current user message
+  const priorHistory = Array.isArray(history) ? history : []
+  const messages = [
+    ...systemMessages,
+    ...priorHistory,
+    { role: 'user', content: message }
+  ]
 
   try {
     const upstream = await fetch(`${base}/v1/chat/completions`, {
@@ -19,12 +33,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: modelName || process.env.HERMES_MODEL || 'hermes',
-        messages: [
-          ...(metaToken   ? [{ role: 'system', content: `Meta Access Token: ${metaToken}` }]   : []),
-          ...(notionToken    ? [{ role: 'system', content: `Notion API Key: ${notionToken}` }]       : []),
-          ...(calendlyToken ? [{ role: 'system', content: `Calendly API Token: ${calendlyToken}` }] : []),
-          { role: 'user', content: message }
-        ],
+        messages,
         stream: false
       })
     })
