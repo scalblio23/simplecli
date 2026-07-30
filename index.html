@@ -281,7 +281,7 @@ const err = t => addLine('error',  '✗', t)
 const dim = t => addLine('dim',    '',  t)
 
 // ── Boot banner ────────────────────────────────────────────────────────────
-function showBanner() {
+function showBanner(info) {
   const art = [
     '  ██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗',
     '  ██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝',
@@ -293,18 +293,68 @@ function showBanner() {
   art.forEach(line => addLine('logo', '', line))
   dim('')
   dim('  ⚡ Nous Research · Messenger of the Digital Gods')
-  dim('  Hermes Agent v0.19.0')
-  dim('')
-  dim('  · Available Tools')
-  dim('  · Available Skills (0)')
-  dim('')
-  dim('  0 tools · 0 skills · /help for commands')
+
+  if (info) {
+    const modelList = info.models?.data?.map(m => m.id).join(', ') || '—'
+    const toolList  = info.tools
+      ? (Array.isArray(info.tools) ? info.tools : info.tools?.data ?? [])
+      : null
+    const skillList = info.skills
+      ? (Array.isArray(info.skills) ? info.skills : info.skills?.data ?? [])
+      : null
+    const toolCount  = toolList  ? toolList.length  : '?'
+    const skillCount = skillList ? skillList.length : '?'
+
+    dim('')
+    dim(`  Model: ${modelList}`)
+    dim('')
+    if (toolList && toolList.length > 0) {
+      dim(`  · Available Tools (${toolCount})`)
+      toolList.slice(0, 8).forEach(t => dim(`      – ${t.name ?? t.id ?? t}`))
+      if (toolList.length > 8) dim(`      … and ${toolList.length - 8} more`)
+    } else {
+      dim(`  · Available Tools (${toolCount})`)
+    }
+    if (skillList && skillList.length > 0) {
+      dim(`  · Available Skills (${skillCount})`)
+      skillList.slice(0, 8).forEach(s => dim(`      – ${s.name ?? s.id ?? s}`))
+    } else {
+      dim(`  · Available Skills (${skillCount})`)
+    }
+    dim('')
+    dim(`  ${toolCount} tools · ${skillCount} skills · /help for commands`)
+  } else {
+    dim('')
+    dim('  · Available Tools')
+    dim('  · Available Skills')
+    dim('')
+    dim('  /help for commands')
+  }
   dim('')
 }
 
-showBanner()
+showBanner(null)
 if (!cfg.url)    sys('No server set — run /url <your-railway-url>')
 if (!cfg.apiKey) sys('No API key set — run /apikey')
+
+async function fetchInfo() {
+  if (!cfg.url || !cfg.apiKey) return
+  try {
+    const res = await fetch('/api/info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: cfg.url, apiKey: cfg.apiKey })
+    })
+    if (!res.ok) return
+    const info = await res.json()
+    if (info.models || info.tools || info.skills) {
+      feed.innerHTML = ''
+      showBanner(info)
+    }
+  } catch { /* silent — banner stays as-is */ }
+}
+
+fetchInfo()
 
 // ── Settings panel ─────────────────────────────────────────────────────────
 function openPanel() {
