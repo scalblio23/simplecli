@@ -207,7 +207,8 @@ body {
 const KEY = 'hermes-cfg'
 const DEF = {
   url: '',
-  secret: '',
+  username: '',
+  password: '',
   agentName: 'Hermes',
   fontSize: 15,
   colors: {
@@ -282,7 +283,7 @@ const dim = t => addLine('dim',    '',  t)
 // Boot
 dim('Type /help to see available commands.')
 if (!cfg.url) sys('No server set — run /url to connect your Railway agent.')
-if (cfg.url && !cfg.secret) sys('No webhook secret set — run /secret to add it.')
+if (cfg.url && (!cfg.username || !cfg.password)) sys('No credentials set — run /login.')
 
 // ── Settings panel ─────────────────────────────────────────────────────────
 function openPanel() {
@@ -330,7 +331,7 @@ async function sendMsg(message) {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, url: cfg.url, secret: cfg.secret })
+    body: JSON.stringify({ message, url: cfg.url, username: cfg.username, password: cfg.password })
   })
   if (!res.ok) {
     const t = await res.text().catch(() => '')
@@ -359,7 +360,7 @@ inputEl.addEventListener('keydown', async e => {
   if (text === '/help') {
     dim('')
     dim('  /url [address]   set your Railway server URL')
-    dim('  /secret          set your Hermes webhook secret')
+    dim('  /login           set your Hermes username & password')
     dim('  /colors          open color & style settings')
     dim('  /clear           clear the screen')
     dim('  /help            show this help')
@@ -369,12 +370,15 @@ inputEl.addEventListener('keydown', async e => {
 
   if (text === '/colors') { openPanel(); return }
 
-  if (text === '/secret') {
-    const s = prompt('Paste your Hermes webhook secret:')
-    if (s === null) return
-    cfg.secret = s.trim()
+  if (text === '/login') {
+    const u = prompt('Hermes username:', cfg.username || 'admin')
+    if (u === null) return
+    const p = prompt('Hermes password:')
+    if (p === null) return
+    cfg.username = u.trim()
+    cfg.password = p
     saveCfg()
-    sys('Webhook secret saved.')
+    sys('Credentials saved.')
     return
   }
 
