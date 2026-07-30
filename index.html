@@ -29,6 +29,83 @@ body {
   overflow: hidden;
 }
 
+/* ── Login overlay ── */
+#auth-overlay {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  background: var(--c-bg);
+  z-index: 40;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0;
+}
+#auth-overlay.hidden { display: none; }
+
+#auth-panel {
+  background: #0d0d0d;
+  border: 1px solid var(--c-border);
+  padding: 36px 32px;
+  width: 380px;
+  max-width: 92vw;
+}
+#auth-logo {
+  color: var(--c-agent);
+  font-size: 0.72em;
+  line-height: 1.2;
+  white-space: pre;
+  margin-bottom: 16px;
+}
+#auth-sub {
+  color: var(--c-dim);
+  font-size: 0.75em;
+  margin-bottom: 28px;
+  letter-spacing: 1px;
+}
+.auth-field {
+  margin-bottom: 14px;
+}
+.auth-field label {
+  display: block;
+  font-size: 0.75em;
+  color: var(--c-dim);
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+}
+.auth-field input {
+  width: 100%;
+  background: #111;
+  border: 1px solid #333;
+  color: #c0c0c0;
+  font-family: inherit;
+  font-size: 0.9em;
+  padding: 8px 10px;
+  outline: none;
+}
+.auth-field input:focus { border-color: var(--c-border); }
+#auth-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 10px;
+  background: none;
+  border: 1px solid var(--c-border);
+  color: var(--c-border);
+  font-family: inherit;
+  font-size: 0.82em;
+  letter-spacing: 3px;
+  cursor: pointer;
+}
+#auth-btn:hover { background: var(--c-border); color: #000; }
+#auth-btn:disabled { opacity: 0.4; cursor: default; }
+#auth-error {
+  margin-top: 12px;
+  font-size: 0.8em;
+  color: var(--c-error);
+  min-height: 1.2em;
+}
+
+/* ── Header ── */
 #header {
   flex-shrink: 0;
   padding: 10px 16px;
@@ -46,7 +123,19 @@ body {
   letter-spacing: 0;
   color: var(--c-dim);
 }
+#logout-btn {
+  background: none;
+  border: none;
+  color: var(--c-dim);
+  font-family: inherit;
+  font-size: 0.68em;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 12px;
+}
+#logout-btn:hover { color: var(--c-error); }
 
+/* ── Messages ── */
 #messages {
   flex: 1;
   overflow-y: auto;
@@ -78,6 +167,7 @@ body {
 #typing { display: none; color: var(--c-dim); padding: 4px 16px; font-size: 0.8em; }
 #typing.show { display: block; }
 
+/* ── Input ── */
 #input-wrap {
   flex-shrink: 0;
   display: flex;
@@ -99,11 +189,12 @@ body {
 }
 #input:disabled { opacity: 0.4; }
 
+/* ── Settings overlay ── */
 #overlay {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.75);
+  background: rgba(0,0,0,0.8);
   z-index: 20;
   align-items: center;
   justify-content: center;
@@ -113,25 +204,52 @@ body {
 #panel {
   background: #111;
   border: 1px solid var(--c-border);
-  padding: 24px;
-  width: 320px;
-  max-width: 90vw;
+  width: 360px;
+  max-width: 92vw;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
-#panel h2 {
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--c-dim);
+  font-family: inherit;
+  font-size: 0.75em;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+.tab-btn.active {
   color: var(--c-border);
-  letter-spacing: 3px;
-  font-size: 0.85em;
-  margin-bottom: 20px;
+  border-bottom-color: var(--c-border);
 }
+
+.tab-content {
+  display: none;
+  padding: 22px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+.tab-content.active { display: block; }
+
 .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 14px;
+  gap: 8px;
 }
-.row label { font-size: 0.82em; color: #888; }
+.row label { font-size: 0.8em; color: #888; flex-shrink: 0; }
 .row input[type="color"] {
   width: 44px; height: 28px;
   border: 1px solid #333;
@@ -139,22 +257,52 @@ body {
   cursor: pointer;
   padding: 2px;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 .row input[type="text"],
+.row input[type="password"],
 .row input[type="number"] {
   background: #1a1a1a;
   border: 1px solid #333;
   color: #c0c0c0;
   font-family: inherit;
   font-size: 0.82em;
-  padding: 4px 8px;
-  width: 110px;
+  padding: 5px 8px;
+  width: 180px;
   outline: none;
+  flex-shrink: 0;
 }
+.row input[type="text"]:focus,
+.row input[type="password"]:focus { border-color: var(--c-border); }
+
+.pw-wrap {
+  position: relative;
+  width: 180px;
+  flex-shrink: 0;
+}
+.pw-wrap input {
+  width: 100% !important;
+  padding-right: 30px !important;
+}
+.pw-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-size: 0.85em;
+  padding: 0;
+  line-height: 1;
+}
+.pw-toggle:hover { color: #999; }
+
 #save-btn {
   width: 100%;
-  margin-top: 8px;
-  padding: 8px;
+  margin-top: 4px;
+  padding: 9px;
   background: none;
   border: 1px solid var(--c-border);
   color: var(--c-border);
@@ -162,15 +310,47 @@ body {
   font-size: 0.82em;
   letter-spacing: 2px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 #save-btn:hover { background: var(--c-border); color: #000; }
+.panel-footer {
+  padding: 0 24px 20px;
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
 
+<!-- ── Login ── -->
+<div id="auth-overlay">
+  <div id="auth-panel">
+    <div id="auth-logo">  ██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗
+  ██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝
+  ███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗
+  ██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║
+  ██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║
+  ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝</div>
+    <div id="auth-sub">⚡ Nous Research · Messenger of the Digital Gods</div>
+    <div class="auth-field">
+      <label>EMAIL</label>
+      <input type="email" id="auth-email" autocomplete="email" placeholder="you@example.com">
+    </div>
+    <div class="auth-field">
+      <label>PASSWORD</label>
+      <input type="password" id="auth-pass" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button id="auth-btn">CONNECT</button>
+    <div id="auth-error"></div>
+  </div>
+</div>
+
+<!-- ── Main UI ── -->
 <div id="header">
   <span>⚡ HERMES</span>
-  <span id="header-hint">/url &nbsp;/apikey &nbsp;/model &nbsp;/colors &nbsp;/help</span>
+  <span>
+    <span id="header-hint">/settings &nbsp;/colors &nbsp;/clear &nbsp;/help</span>
+    <button id="logout-btn" title="Log out">logout</button>
+  </span>
 </div>
 
 <div id="messages"></div>
@@ -181,34 +361,126 @@ body {
   <input id="input" type="text" autocomplete="off" spellcheck="false" autofocus placeholder="type a message or /help">
 </div>
 
+<!-- ── Settings panel ── -->
 <div id="overlay">
   <div id="panel">
-    <h2>⚡ COLORS &amp; STYLE</h2>
-    <div class="row"><label>Background</label>        <input type="color" id="cp-bg"></div>
-    <div class="row"><label>Border / chrome</label>   <input type="color" id="cp-border"></div>
-    <div class="row"><label>Accent / system</label>   <input type="color" id="cp-accent"></div>
-    <div class="row"><label>Your messages</label>     <input type="color" id="cp-you"></div>
-    <div class="row"><label>Agent responses</label>   <input type="color" id="cp-agent"></div>
-    <div class="row"><label>Errors</label>            <input type="color" id="cp-error"></div>
-    <div class="row"><label>Font size (px)</label>
-      <input type="number" id="cp-size" min="11" max="22" step="1">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="connection">CONNECTION</button>
+      <button class="tab-btn"        data-tab="colors">COLORS</button>
     </div>
-    <div class="row"><label>Agent name</label>
-      <input type="text" id="cp-name">
+
+    <!-- Connection tab -->
+    <div class="tab-content active" id="tab-connection">
+      <div class="row">
+        <label>Server URL</label>
+        <input type="text" id="cp-url" placeholder="http://host:port">
+      </div>
+      <div class="row">
+        <label>API Key</label>
+        <div class="pw-wrap">
+          <input type="password" id="cp-apikey" placeholder="••••••••">
+          <button class="pw-toggle" onclick="togglePw('cp-apikey',this)">👁</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Model name</label>
+        <input type="text" id="cp-model" placeholder="hermes">
+      </div>
+      <div class="row">
+        <label>Agent display name</label>
+        <input type="text" id="cp-name" placeholder="Hermes">
+      </div>
     </div>
-    <button id="save-btn" onclick="closePanel()">SAVE &amp; CLOSE</button>
+
+    <!-- Colors tab -->
+    <div class="tab-content" id="tab-colors">
+      <div class="row"><label>Background</label>       <input type="color" id="cp-bg"></div>
+      <div class="row"><label>Border / chrome</label>  <input type="color" id="cp-border"></div>
+      <div class="row"><label>Accent / system</label>  <input type="color" id="cp-accent"></div>
+      <div class="row"><label>Your messages</label>    <input type="color" id="cp-you"></div>
+      <div class="row"><label>Agent responses</label>  <input type="color" id="cp-agent"></div>
+      <div class="row"><label>Errors</label>           <input type="color" id="cp-error"></div>
+      <div class="row"><label>Font size (px)</label>
+        <input type="number" id="cp-size" min="11" max="22" step="1">
+      </div>
+    </div>
+
+    <div class="panel-footer">
+      <button id="save-btn" onclick="closePanel()">SAVE &amp; CLOSE</button>
+    </div>
   </div>
 </div>
 
 <script>
-// ── Config ─────────────────────────────────────────────────────────────────
+// ── Auth ────────────────────────────────────────────────────────────────────
+const AUTH_KEY = 'hermes-auth'
+
+function getToken()  { return localStorage.getItem(AUTH_KEY) }
+function saveToken(t){ localStorage.setItem(AUTH_KEY, t) }
+function clearToken(){ localStorage.removeItem(AUTH_KEY) }
+
+function isLoggedIn() {
+  const t = getToken()
+  if (!t) return false
+  try {
+    const payload = JSON.parse(atob(t.split('.')[0]))
+    return payload.exp > Date.now()
+  } catch { return false }
+}
+
+function showLogin()  { document.getElementById('auth-overlay').classList.remove('hidden') }
+function hideLogin()  { document.getElementById('auth-overlay').classList.add('hidden') }
+
+// Login form
+document.getElementById('auth-btn').addEventListener('click', doLogin)
+document.getElementById('auth-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
+document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('auth-pass').focus() })
+
+async function doLogin() {
+  const email = document.getElementById('auth-email').value.trim()
+  const pass  = document.getElementById('auth-pass').value
+  const errEl = document.getElementById('auth-error')
+  const btn   = document.getElementById('auth-btn')
+  if (!email || !pass) { errEl.textContent = 'Enter your email and password.'; return }
+  btn.disabled = true
+  btn.textContent = 'CONNECTING…'
+  errEl.textContent = ''
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    })
+    const data = await res.json()
+    if (!res.ok) { errEl.textContent = data.error || 'Login failed.'; return }
+    saveToken(data.token)
+    hideLogin()
+    boot()
+  } catch (e) {
+    errEl.textContent = 'Network error — try again.'
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'CONNECT'
+  }
+}
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  clearToken()
+  showLogin()
+  document.getElementById('auth-email').value = ''
+  document.getElementById('auth-pass').value  = ''
+  document.getElementById('auth-error').textContent = ''
+  feed.innerHTML = ''
+})
+
+// ── Config ──────────────────────────────────────────────────────────────────
 const KEY = 'hermes-cfg'
 const DEF = {
-  url: '',
-  apiKey: '',
+  url:       '',
+  apiKey:    '',
   agentName: 'Hermes',
   modelName: 'hermes',
-  fontSize: 15,
+  fontSize:  15,
   colors: {
     bg:     '#0d0d0d',
     border: '#00e5ff',
@@ -229,10 +501,9 @@ function loadCfg() {
 }
 
 function saveCfg() { localStorage.setItem(KEY, JSON.stringify(cfg)) }
-
 let cfg = loadCfg()
 
-// ── Theme ──────────────────────────────────────────────────────────────────
+// ── Theme ────────────────────────────────────────────────────────────────────
 function applyTheme() {
   const s = document.documentElement.style
   s.setProperty('--c-bg',     cfg.colors.bg)
@@ -245,7 +516,7 @@ function applyTheme() {
 }
 applyTheme()
 
-// ── Messages ───────────────────────────────────────────────────────────────
+// ── Messages ─────────────────────────────────────────────────────────────────
 const feed     = document.getElementById('messages')
 const typingEl = document.getElementById('typing')
 const inputEl  = document.getElementById('input')
@@ -253,25 +524,20 @@ const inputEl  = document.getElementById('input')
 function addLine(type, prefix, text, showTime) {
   const div = document.createElement('div')
   div.className = 'line ' + type
-
   const p = document.createElement('span')
   p.className = 'prefix'
   p.textContent = prefix
-
   const t = document.createElement('span')
   t.className = 'text'
   t.textContent = text
-
   div.appendChild(p)
   div.appendChild(t)
-
   if (showTime) {
     const ts = document.createElement('span')
     ts.className = 'ts'
     ts.textContent = new Date().toLocaleTimeString()
     div.appendChild(ts)
   }
-
   feed.appendChild(div)
   feed.scrollTop = feed.scrollHeight
 }
@@ -280,7 +546,7 @@ const sys = t => addLine('system', '→', t)
 const err = t => addLine('error',  '✗', t)
 const dim = t => addLine('dim',    '',  t)
 
-// ── Boot banner ────────────────────────────────────────────────────────────
+// ── Banner ───────────────────────────────────────────────────────────────────
 function showBanner(info) {
   const art = [
     '  ██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗',
@@ -295,17 +561,12 @@ function showBanner(info) {
   dim('  ⚡ Nous Research · Messenger of the Digital Gods')
 
   if (info) {
-    const modelList = info.models?.data?.map(m => m.id).join(', ') || '—'
-    const toolList  = info.tools
-      ? (Array.isArray(info.tools) ? info.tools : info.tools?.data ?? [])
-      : null
-    const skillList = info.skills
-      ? (Array.isArray(info.skills) ? info.skills : info.skills?.data ?? [])
-      : null
+    const modelList  = info.models?.data?.map(m => m.id).join(', ') || '—'
+    const toolList   = Array.isArray(info.tools) ? info.tools : (info.tools?.data ?? null)
+    const skillList  = Array.isArray(info.skills) ? info.skills : (info.skills?.data ?? null)
     const toolCount  = toolList  ? toolList.length  : '?'
     const skillCount = skillList ? skillList.length : '?'
 
-    dim('')
     dim(`  Model: ${modelList}`)
     dim('')
     if (toolList && toolList.length > 0) {
@@ -333,10 +594,6 @@ function showBanner(info) {
   dim('')
 }
 
-showBanner(null)
-if (!cfg.url)    sys('No server set — run /url <your-railway-url>')
-if (!cfg.apiKey) sys('No API key set — run /apikey')
-
 async function fetchInfo() {
   if (!cfg.url || !cfg.apiKey) return
   try {
@@ -350,15 +607,52 @@ async function fetchInfo() {
     if (info.models || info.tools || info.skills) {
       feed.innerHTML = ''
       showBanner(info)
+      if (!cfg.url)    sys('No server set — open /settings')
+      if (!cfg.apiKey) sys('No API key set — open /settings')
     }
-  } catch { /* silent — banner stays as-is */ }
+  } catch { /* silent */ }
 }
 
-fetchInfo()
+function boot() {
+  feed.innerHTML = ''
+  showBanner(null)
+  if (!cfg.url)    sys('No server set — open /settings')
+  if (!cfg.apiKey) sys('No API key set — open /settings')
+  fetchInfo()
+  inputEl.focus()
+}
 
-// ── Settings panel ─────────────────────────────────────────────────────────
-function openPanel() {
+// ── Init ─────────────────────────────────────────────────────────────────────
+if (isLoggedIn()) {
+  hideLogin()
+  boot()
+} else {
+  showLogin()
+}
+
+// ── Settings panel ───────────────────────────────────────────────────────────
+function togglePw(id, btn) {
+  const el = document.getElementById(id)
+  el.type = el.type === 'password' ? 'text' : 'password'
+  btn.textContent = el.type === 'password' ? '👁' : '🙈'
+}
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'))
+    btn.classList.add('active')
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active')
+  })
+})
+
+function openPanel(tab) {
   const c = cfg.colors
+  document.getElementById('cp-url').value    = cfg.url
+  document.getElementById('cp-apikey').value = cfg.apiKey
+  document.getElementById('cp-model').value  = cfg.modelName
+  document.getElementById('cp-name').value   = cfg.agentName
   document.getElementById('cp-bg').value     = c.bg
   document.getElementById('cp-border').value = c.border
   document.getElementById('cp-accent').value = c.accent
@@ -366,11 +660,18 @@ function openPanel() {
   document.getElementById('cp-agent').value  = c.agent
   document.getElementById('cp-error').value  = c.error
   document.getElementById('cp-size').value   = cfg.fontSize
-  document.getElementById('cp-name').value   = cfg.agentName
+  if (tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab))
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tab))
+  }
   document.getElementById('overlay').classList.add('open')
 }
 
 function closePanel() {
+  cfg.url       = document.getElementById('cp-url').value.trim().replace(/\/$/, '')
+  cfg.apiKey    = document.getElementById('cp-apikey').value.trim()
+  cfg.modelName = document.getElementById('cp-model').value.trim() || 'hermes'
+  cfg.agentName = document.getElementById('cp-name').value.trim() || 'Hermes'
   cfg.colors.bg     = document.getElementById('cp-bg').value
   cfg.colors.border = document.getElementById('cp-border').value
   cfg.colors.accent = document.getElementById('cp-accent').value
@@ -378,11 +679,11 @@ function closePanel() {
   cfg.colors.agent  = document.getElementById('cp-agent').value
   cfg.colors.error  = document.getElementById('cp-error').value
   cfg.fontSize      = parseInt(document.getElementById('cp-size').value) || 15
-  cfg.agentName     = document.getElementById('cp-name').value.trim() || 'Hermes'
   applyTheme()
   saveCfg()
   document.getElementById('overlay').classList.remove('open')
-  sys('Colors saved.')
+  sys('Settings saved.')
+  if (cfg.url && cfg.apiKey) fetchInfo()
   inputEl.focus()
 }
 
@@ -397,7 +698,7 @@ document.getElementById('overlay').addEventListener('click', e => {
   if (e.target.id === 'overlay') closePanel()
 })
 
-// ── Send to Hermes ─────────────────────────────────────────────────────────
+// ── Send ──────────────────────────────────────────────────────────────────────
 async function sendMsg(message) {
   const res = await fetch('/api/chat', {
     method: 'POST',
@@ -412,7 +713,7 @@ async function sendMsg(message) {
   return data.response ?? JSON.stringify(data)
 }
 
-// ── Input handler ──────────────────────────────────────────────────────────
+// ── Input ─────────────────────────────────────────────────────────────────────
 let busy = false
 
 inputEl.addEventListener('keydown', async e => {
@@ -423,55 +724,21 @@ inputEl.addEventListener('keydown', async e => {
 
   if (text === '/help') {
     dim('')
-    dim('  /url <address>   set your Railway base URL')
-    dim('  /apikey          set your Hermes API_SERVER_KEY')
-    dim('  /model [name]    set model name (matches API_SERVER_MODEL_NAME)')
-    dim('  /colors          open color & style settings')
-    dim('  /clear           clear the screen')
-    dim('  /help            show this help')
+    dim('  /settings   open connection & color settings')
+    dim('  /colors     open color settings directly')
+    dim('  /clear      clear the screen')
+    dim('  /help       show this help')
     dim('')
     return
   }
 
-  if (text === '/colors') { openPanel(); return }
+  if (text === '/settings') { openPanel('connection'); return }
+  if (text === '/colors')   { openPanel('colors');     return }
 
-  if (text.startsWith('/model')) {
-    const parts = text.split(/\s+/)
-    if (parts.length > 1) {
-      cfg.modelName = parts.slice(1).join(' ').trim()
-    } else {
-      const v = prompt('Model name (must match API_SERVER_MODEL_NAME in Hermes config)', cfg.modelName || 'hermes')
-      if (v === null) return
-      cfg.modelName = v.trim() || 'hermes'
-    }
-    saveCfg()
-    sys(`Model: ${cfg.modelName}`)
-    return
-  }
-
-  if (text === '/apikey') {
-    const k = prompt('Hermes API_SERVER_KEY\n(the key you set in the API Server channel config)', cfg.apiKey ? '••••' : '')
-    if (k === null) return
-    const trimmed = k.trim()
-    if (trimmed && trimmed !== '••••') cfg.apiKey = trimmed
-    saveCfg()
-    sys(cfg.apiKey ? 'API key saved.' : 'API key cleared.')
-    return
-  }
-
-  if (text === '/clear') { feed.innerHTML = ''; showBanner(); return }
-
-  if (text.startsWith('/url')) {
-    const parts = text.split(/\s+/)
-    if (parts.length > 1) {
-      cfg.url = parts.slice(1).join(' ').trim().replace(/\/$/, '')
-    } else {
-      const v = prompt('Railway base URL (no trailing slash)\ne.g. http://sakura.proxy.rlwy.net:12494', cfg.url)
-      if (v === null) return
-      cfg.url = v.trim().replace(/\/$/, '')
-    }
-    saveCfg()
-    sys(cfg.url ? `Server: ${cfg.url}` : 'Server URL cleared.')
+  if (text === '/clear') {
+    feed.innerHTML = ''
+    showBanner(null)
+    fetchInfo()
     return
   }
 
@@ -480,8 +747,8 @@ inputEl.addEventListener('keydown', async e => {
     return
   }
 
-  if (!cfg.url)    { err('No server set — run /url first.'); return }
-  if (!cfg.apiKey) { err('No API key set — run /apikey first.'); return }
+  if (!cfg.url)    { err('No server set — run /settings'); return }
+  if (!cfg.apiKey) { err('No API key set — run /settings'); return }
 
   addLine('you', 'You ›', text)
   busy = true
