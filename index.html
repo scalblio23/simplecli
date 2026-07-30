@@ -326,6 +326,13 @@ body {
           <button class="pw-toggle" onclick="togglePw('cp-meta',this)">👁</button>
         </div>
       </div>
+      <div class="row">
+        <label>Notion API Key</label>
+        <div class="pw-wrap">
+          <input type="password" id="cp-notion" placeholder="secret_…">
+          <button class="pw-toggle" onclick="togglePw('cp-notion',this)">👁</button>
+        </div>
+      </div>
     </div>
 
     <!-- Skins -->
@@ -425,7 +432,7 @@ function doLogout() {
 // ── Config ───────────────────────────────────────────────────────────────────
 const KEY = 'hermes-cfg'
 const DEF = {
-  url: '', apiKey: '', agentName: 'Hermes', modelName: 'hermes', metaToken: '',
+  url: '', apiKey: '', agentName: 'Hermes', modelName: 'hermes', metaToken: '', notionToken: '',
   fontSize: 15, activeSkin: 'cyber',
   colors: { bg: '#0d0d0d', border: '#00e5ff', accent: '#e040fb', you: '#69f0ae', agent: '#ffff00', error: '#ff5252', card: 'transparent' }
 }
@@ -644,6 +651,7 @@ function openPanel(tab) {
   document.getElementById('cp-model').value  = cfg.modelName
   document.getElementById('cp-name').value   = cfg.agentName
   document.getElementById('cp-meta').value   = cfg.metaToken
+  document.getElementById('cp-notion').value = cfg.notionToken
   syncColorPickers()
   buildSkins()
   if (tab) {
@@ -658,7 +666,8 @@ function closePanel() {
   cfg.apiKey    = document.getElementById('cp-apikey').value.trim()
   cfg.modelName = document.getElementById('cp-model').value.trim() || 'hermes'
   cfg.agentName = document.getElementById('cp-name').value.trim() || 'Hermes'
-  cfg.metaToken = document.getElementById('cp-meta').value.trim()
+  cfg.metaToken   = document.getElementById('cp-meta').value.trim()
+  cfg.notionToken = document.getElementById('cp-notion').value.trim()
   cfg.colors.bg     = document.getElementById('cp-bg').value
   cfg.colors.border = document.getElementById('cp-border').value
   cfg.colors.accent = document.getElementById('cp-accent').value
@@ -685,7 +694,7 @@ document.getElementById('overlay').addEventListener('click', e => { if (e.target
 async function sendMsg(message) {
   const res = await fetch('/api/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName, metaToken: cfg.metaToken || undefined })
+    body: JSON.stringify({ message, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName, metaToken: cfg.metaToken || undefined, notionToken: cfg.notionToken || undefined })
   })
   if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `HTTP ${res.status}`) }
   const data = await res.json()
@@ -714,7 +723,7 @@ inputEl.addEventListener('keydown', async e => {
   busy = true; inputEl.disabled = true; typingEl.classList.add('show')
   try {
     const reply = await sendMsg(text)
-    addCard('agent', cfg.agentName + ' ›', reply, true)
+    addLine('agent', cfg.agentName + ' ›', reply, true)
   } catch (e) { err(e.message) }
   finally { busy = false; inputEl.disabled = false; typingEl.classList.remove('show'); inputEl.focus() }
 })
