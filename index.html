@@ -25,8 +25,17 @@ body {
   font-family: 'Courier New', Courier, monospace;
   font-size: var(--font-size);
   height: 100dvh;
+  overflow: hidden;
+}
+
+#app {
+  max-width: 900px;
+  margin: 0 auto;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  border-left: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border);
   overflow: hidden;
 }
 
@@ -258,6 +267,7 @@ body {
   </div>
 </div>
 
+<div id="app">
 <!-- ── Header ── -->
 <div id="header">
   <span>⚡ HERMES</span>
@@ -277,6 +287,7 @@ body {
   <span id="prompt">›</span>
   <input id="input" type="text" autocomplete="off" spellcheck="false" autofocus placeholder="type a message or /help">
 </div>
+</div><!-- /#app -->
 
 <!-- ── Settings panel ── -->
 <div id="overlay">
