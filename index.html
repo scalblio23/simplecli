@@ -29,7 +29,8 @@ body {
 }
 
 #app {
-  max-width: 900px;
+  width: calc(100% - 48px);
+  max-width: 1400px;
   margin: 0 auto;
   height: 100dvh;
   display: flex;
@@ -678,7 +679,6 @@ function closePanel() {
   applyTheme(); saveCfg()
   document.getElementById('overlay').classList.remove('open')
   sys('Settings saved.')
-  if (cfg.url && cfg.apiKey) fetchInfo()
   inputEl.focus()
 }
 
