@@ -275,6 +275,13 @@ body {
         <label>Agent display name</label>
         <input type="text" id="cp-name" placeholder="Hermes">
       </div>
+      <div class="row">
+        <label>Meta Access Token</label>
+        <div class="pw-wrap">
+          <input type="password" id="cp-meta" placeholder="EAA…">
+          <button class="pw-toggle" onclick="togglePw('cp-meta',this)">👁</button>
+        </div>
+      </div>
     </div>
 
     <!-- Skins -->
@@ -374,7 +381,7 @@ function doLogout() {
 // ── Config ───────────────────────────────────────────────────────────────────
 const KEY = 'hermes-cfg'
 const DEF = {
-  url: '', apiKey: '', agentName: 'Hermes', modelName: 'hermes',
+  url: '', apiKey: '', agentName: 'Hermes', modelName: 'hermes', metaToken: '',
   fontSize: 15, activeSkin: 'cyber',
   colors: { bg: '#0d0d0d', border: '#00e5ff', accent: '#e040fb', you: '#69f0ae', agent: '#ffff00', error: '#ff5252' }
 }
@@ -551,6 +558,7 @@ function openPanel(tab) {
   document.getElementById('cp-apikey').value = cfg.apiKey
   document.getElementById('cp-model').value  = cfg.modelName
   document.getElementById('cp-name').value   = cfg.agentName
+  document.getElementById('cp-meta').value   = cfg.metaToken
   syncColorPickers()
   buildSkins()
   if (tab) {
@@ -565,6 +573,7 @@ function closePanel() {
   cfg.apiKey    = document.getElementById('cp-apikey').value.trim()
   cfg.modelName = document.getElementById('cp-model').value.trim() || 'hermes'
   cfg.agentName = document.getElementById('cp-name').value.trim() || 'Hermes'
+  cfg.metaToken = document.getElementById('cp-meta').value.trim()
   cfg.colors.bg     = document.getElementById('cp-bg').value
   cfg.colors.border = document.getElementById('cp-border').value
   cfg.colors.accent = document.getElementById('cp-accent').value
@@ -591,7 +600,7 @@ document.getElementById('overlay').addEventListener('click', e => { if (e.target
 async function sendMsg(message) {
   const res = await fetch('/api/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName })
+    body: JSON.stringify({ message, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName, metaToken: cfg.metaToken || undefined })
   })
   if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `HTTP ${res.status}`) }
   const data = await res.json()
