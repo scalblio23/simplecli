@@ -172,7 +172,7 @@ body {
 
 <div id="header">
   <span>⚡ HERMES</span>
-  <span id="header-hint">/url &nbsp;/colors &nbsp;/clear &nbsp;/help</span>
+  <span id="header-hint">/url &nbsp;/apikey &nbsp;/model &nbsp;/colors &nbsp;/help</span>
 </div>
 
 <div id="messages"></div>
@@ -207,9 +207,9 @@ body {
 const KEY = 'hermes-cfg'
 const DEF = {
   url: '',
-  username: '',
-  password: '',
+  apiKey: '',
   agentName: 'Hermes',
+  modelName: 'hermes',
   fontSize: 15,
   colors: {
     border: '#00e5ff',
@@ -282,8 +282,8 @@ const dim = t => addLine('dim',    '',  t)
 
 // Boot
 dim('Type /help to see available commands.')
-if (!cfg.url) sys('No server set — run /url to connect your Railway agent.')
-if (cfg.url && (!cfg.username || !cfg.password)) sys('No credentials set — run /login.')
+if (!cfg.url)    sys('No server set — run /url <your-railway-url>')
+if (!cfg.apiKey) sys('No API key set — run /apikey')
 
 // ── Settings panel ─────────────────────────────────────────────────────────
 function openPanel() {
@@ -331,20 +331,14 @@ async function sendMsg(message) {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, url: cfg.url, username: cfg.username, password: cfg.password })
+    body: JSON.stringify({ message, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName })
   })
   if (!res.ok) {
-    const t = await res.text().catch(() => '')
-    throw new Error(`HTTP ${res.status}: ${t || res.statusText}`)
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || `HTTP ${res.status}`)
   }
   const data = await res.json()
-  return (
-    typeof data === 'string'            ? data :
-    data.response                       ?? data.message ??
-    data.text                           ?? data.content ??
-    data.choices?.[0]?.message?.content ??
-    JSON.stringify(data)
-  )
+  return data.response ?? JSON.stringify(data)
 }
 
 // ── Input handler ──────────────────────────────────────────────────────────
@@ -359,8 +353,9 @@ inputEl.addEventListener('keydown', async e => {
   // Commands
   if (text === '/help') {
     dim('')
-    dim('  /url [address]   set your Railway server URL')
-    dim('  /login           set your Hermes username & password')
+    dim('  /url <address>   set your Railway base URL (no trailing slash)')
+    dim('  /apikey          set your Hermes API_SERVER_KEY')
+    dim('  /model [name]    set model name (must match API_SERVER_MODEL_NAME)')
     dim('  /colors          open color & style settings')
     dim('  /clear           clear the screen')
     dim('  /help            show this help')
@@ -370,15 +365,27 @@ inputEl.addEventListener('keydown', async e => {
 
   if (text === '/colors') { openPanel(); return }
 
-  if (text === '/login') {
-    const u = prompt('Hermes username:', cfg.username || 'admin')
-    if (u === null) return
-    const p = prompt('Hermes password:')
-    if (p === null) return
-    cfg.username = u.trim()
-    cfg.password = p
+  if (text.startsWith('/model')) {
+    const parts = text.split(/\s+/)
+    if (parts.length > 1) {
+      cfg.modelName = parts.slice(1).join(' ').trim()
+    } else {
+      const v = prompt('Model name (must match API_SERVER_MODEL_NAME in Hermes config)', cfg.modelName || 'hermes')
+      if (v === null) return
+      cfg.modelName = v.trim() || 'hermes'
+    }
     saveCfg()
-    sys('Credentials saved.')
+    sys(`Model: ${cfg.modelName}`)
+    return
+  }
+
+  if (text === '/apikey') {
+    const k = prompt('Hermes API_SERVER_KEY\n(the key you set in the API Server channel config)', cfg.apiKey ? '••••' : '')
+    if (k === null) return
+    const trimmed = k.trim()
+    if (trimmed && trimmed !== '••••') cfg.apiKey = trimmed
+    saveCfg()
+    sys(cfg.apiKey ? 'API key saved.' : 'API key cleared.')
     return
   }
 
@@ -387,11 +394,11 @@ inputEl.addEventListener('keydown', async e => {
   if (text.startsWith('/url')) {
     const parts = text.split(/\s+/)
     if (parts.length > 1) {
-      cfg.url = parts.slice(1).join(' ').trim()
+      cfg.url = parts.slice(1).join(' ').trim().replace(/\/$/, '')
     } else {
-      const v = prompt('Full Railway endpoint URL\n(e.g. https://hermes.up.railway.app/chat)', cfg.url)
+      const v = prompt('Railway base URL (no trailing slash)\ne.g. https://hermes-agent-production-aea0.up.railway.app', cfg.url)
       if (v === null) return
-      cfg.url = v.trim()
+      cfg.url = v.trim().replace(/\/$/, '')
     }
     saveCfg()
     sys(cfg.url ? `Server: ${cfg.url}` : 'Server URL cleared.')
@@ -405,7 +412,8 @@ inputEl.addEventListener('keydown', async e => {
   }
 
   // Message to Hermes
-  if (!cfg.url) { err('No server set — run /url first.'); return }
+  if (!cfg.url)    { err('No server set — run /url first.'); return }
+  if (!cfg.apiKey) { err('No API key set — run /apikey first.'); return }
 
   addLine('you', 'You ›', text)
   busy = true
