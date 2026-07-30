@@ -337,6 +337,13 @@ body {
           <button class="pw-toggle" onclick="togglePw('cp-notion',this)">👁</button>
         </div>
       </div>
+      <div class="row">
+        <label>Calendly Token</label>
+        <div class="pw-wrap">
+          <input type="password" id="cp-calendly" placeholder="eyJ…">
+          <button class="pw-toggle" onclick="togglePw('cp-calendly',this)">👁</button>
+        </div>
+      </div>
     </div>
 
     <!-- Skins -->
@@ -437,7 +444,7 @@ function doLogout() {
 // ── Config ───────────────────────────────────────────────────────────────────
 const KEY = 'hermes-cfg'
 const DEF = {
-  url: '', apiKey: '', agentName: 'Hermes', modelName: 'hermes', metaToken: '', notionToken: '',
+  url: '', apiKey: '', agentName: 'Hermes', modelName: 'hermes', metaToken: '', notionToken: '', calendlyToken: '',
   fontSize: 15, activeSkin: 'cyber',
   colors: { bg: '#0d0d0d', border: '#00e5ff', accent: '#e040fb', you: '#69f0ae', agent: '#ffff00', error: '#ff5252', card: 'transparent', margin: '#0d0d0d' }
 }
@@ -658,7 +665,8 @@ function openPanel(tab) {
   document.getElementById('cp-model').value  = cfg.modelName
   document.getElementById('cp-name').value   = cfg.agentName
   document.getElementById('cp-meta').value   = cfg.metaToken
-  document.getElementById('cp-notion').value = cfg.notionToken
+  document.getElementById('cp-notion').value   = cfg.notionToken
+  document.getElementById('cp-calendly').value = cfg.calendlyToken
   syncColorPickers()
   buildSkins()
   if (tab) {
@@ -674,7 +682,8 @@ function closePanel() {
   cfg.modelName = document.getElementById('cp-model').value.trim() || 'hermes'
   cfg.agentName = document.getElementById('cp-name').value.trim() || 'Hermes'
   cfg.metaToken   = document.getElementById('cp-meta').value.trim()
-  cfg.notionToken = document.getElementById('cp-notion').value.trim()
+  cfg.notionToken   = document.getElementById('cp-notion').value.trim()
+  cfg.calendlyToken = document.getElementById('cp-calendly').value.trim()
   cfg.colors.margin = document.getElementById('cp-margin').value
   cfg.colors.bg     = document.getElementById('cp-bg').value
   cfg.colors.border = document.getElementById('cp-border').value
@@ -701,7 +710,7 @@ document.getElementById('overlay').addEventListener('click', e => { if (e.target
 async function sendMsg(message) {
   const res = await fetch('/api/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName, metaToken: cfg.metaToken || undefined, notionToken: cfg.notionToken || undefined })
+    body: JSON.stringify({ message, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName, metaToken: cfg.metaToken || undefined, notionToken: cfg.notionToken || undefined, calendlyToken: cfg.calendlyToken || undefined })
   })
   if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `HTTP ${res.status}`) }
   const data = await res.json()

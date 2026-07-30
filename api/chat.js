@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed')
 
-  const { message, url, apiKey, modelName, metaToken, notionToken } = req.body ?? {}
+  const { message, url, apiKey, modelName, metaToken, notionToken, calendlyToken } = req.body ?? {}
   if (!message) return res.status(400).json({ error: 'message is required' })
 
   const base = (url || process.env.HERMES_URL || '').trim().replace(/\/$/, '')
@@ -21,7 +21,8 @@ export default async function handler(req, res) {
         model: modelName || process.env.HERMES_MODEL || 'hermes',
         messages: [
           ...(metaToken   ? [{ role: 'system', content: `Meta Access Token: ${metaToken}` }]   : []),
-          ...(notionToken ? [{ role: 'system', content: `Notion API Key: ${notionToken}` }]     : []),
+          ...(notionToken    ? [{ role: 'system', content: `Notion API Key: ${notionToken}` }]       : []),
+          ...(calendlyToken ? [{ role: 'system', content: `Calendly API Token: ${calendlyToken}` }] : []),
           { role: 'user', content: message }
         ],
         stream: false
