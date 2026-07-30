@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hermes CLI</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --c-bg:     #0d0d0d;
+  --c-border: #00e5ff;
+  --c-accent: #e040fb;
+  --c-you:    #69f0ae;
+  --c-agent:  #ffff00;
+  --c-error:  #ff5252;
+  --c-dim:    #444;
+  --font-size: 15px;
+}
+
+body {
+  background: var(--c-bg);
+  color: #c0c0c0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: var(--font-size);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+#header {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--c-border);
+  color: var(--c-border);
+  font-weight: bold;
+  letter-spacing: 3px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#header-hint {
+  font-size: 0.7em;
+  font-weight: normal;
+  letter-spacing: 0;
+  color: var(--c-dim);
+}
+
+/* Messages */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #222 transparent;
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  line-height: 1.7;
+}
+.prefix { flex-shrink: 0; }
+.text   { word-break: break-word; white-space: pre-wrap; }
+.ts     { flex-shrink: 0; font-size: 0.7em; color: var(--c-dim); margin-left: auto; padding-left: 12px; }
+
+.you    .prefix, .you    .text { color: var(--c-you); }
+.agent  .prefix, .agent  .text { color: var(--c-agent); }
+.system .prefix, .system .text { color: var(--c-accent); }
+.error  .prefix, .error  .text { color: var(--c-error); }
+.dim    .text { color: var(--c-dim); font-size: 0.85em; }
+
+/* Typing indicator */
+#typing { display: none; color: var(--c-dim); padding: 4px 16px; font-size: 0.8em; }
+#typing.show { display: block; }
+
+/* Input */
+#input-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-top: 1px solid #1a1a1a;
+  gap: 8px;
+}
+#prompt { color: var(--c-you); flex-shrink: 0; }
+#input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--c-you);
+  font-family: inherit;
+  font-size: inherit;
+  caret-color: var(--c-you);
+}
+#input:disabled { opacity: 0.4; }
+
+/* Settings overlay */
+#overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 20;
+  align-items: center;
+  justify-content: center;
+}
+#overlay.open { display: flex; }
+
+#panel {
+  background: #111;
+  border: 1px solid var(--c-border);
+  padding: 24px;
+  width: 320px;
+  max-width: 90vw;
+}
+#panel h2 {
+  color: var(--c-border);
+  letter-spacing: 3px;
+  font-size: 0.85em;
+  margin-bottom: 20px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.row label { font-size: 0.82em; color: #888; }
+.row input[type="color"] {
+  width: 44px; height: 28px;
+  border: 1px solid #333;
+  background: #0d0d0d;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+}
+.row input[type="text"],
+.row input[type="number"] {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #c0c0c0;
+  font-family: inherit;
+  font-size: 0.82em;
+  padding: 4px 8px;
+  width: 110px;
+  outline: none;
+}
+#save-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background: none;
+  border: 1px solid var(--c-border);
+  color: var(--c-border);
+  font-family: inherit;
+  font-size: 0.82em;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+#save-btn:hover { background: var(--c-border); color: #000; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <span>⚡ HERMES</span>
+  <span id="header-hint">/url &nbsp;/colors &nbsp;/clear &nbsp;/help</span>
+</div>
+
+<div id="messages"></div>
+<div id="typing">Hermes is typing…</div>
+
+<div id="input-wrap">
+  <span id="prompt">›</span>
+  <input id="input" type="text" autocomplete="off" spellcheck="false" autofocus placeholder="type a message or /help">
+</div>
+
+<!-- Color settings panel -->
+<div id="overlay">
+  <div id="panel">
+    <h2>⚡ COLORS &amp; STYLE</h2>
+    <div class="row"><label>Border / chrome</label>  <input type="color" id="cp-border"></div>
+    <div class="row"><label>Accent / system</label>  <input type="color" id="cp-accent"></div>
+    <div class="row"><label>Your messages</label>    <input type="color" id="cp-you"></div>
+    <div class="row"><label>Agent responses</label>  <input type="color" id="cp-agent"></div>
+    <div class="row"><label>Errors</label>           <input type="color" id="cp-error"></div>
+    <div class="row"><label>Font size (px)</label>
+      <input type="number" id="cp-size" min="11" max="22" step="1">
+    </div>
+    <div class="row"><label>Agent name</label>
+      <input type="text" id="cp-name">
+    </div>
+    <button id="save-btn" onclick="closePanel()">SAVE &amp; CLOSE</button>
+  </div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+const KEY = 'hermes-cfg'
+const DEF = {
+  url: '',
+  agentName: 'Hermes',
+  fontSize: 15,
+  colors: {
+    border: '#00e5ff',
+    accent: '#e040fb',
+    you:    '#69f0ae',
+    agent:  '#ffff00',
+    error:  '#ff5252'
+  }
+}
+
+function loadCfg() {
+  try {
+    const s = localStorage.getItem(KEY)
+    if (!s) return JSON.parse(JSON.stringify(DEF))
+    const saved = JSON.parse(s)
+    return { ...DEF, ...saved, colors: { ...DEF.colors, ...saved.colors } }
+  } catch { return JSON.parse(JSON.stringify(DEF)) }
+}
+
+function saveCfg() { localStorage.setItem(KEY, JSON.stringify(cfg)) }
+
+let cfg = loadCfg()
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function applyTheme() {
+  const s = document.documentElement.style
+  s.setProperty('--c-border', cfg.colors.border)
+  s.setProperty('--c-accent', cfg.colors.accent)
+  s.setProperty('--c-you',    cfg.colors.you)
+  s.setProperty('--c-agent',  cfg.colors.agent)
+  s.setProperty('--c-error',  cfg.colors.error)
+  s.setProperty('--font-size', cfg.fontSize + 'px')
+}
+applyTheme()
+
+// ── Messages ───────────────────────────────────────────────────────────────
+const feed     = document.getElementById('messages')
+const typingEl = document.getElementById('typing')
+const inputEl  = document.getElementById('input')
+
+function addLine(type, prefix, text, showTime) {
+  const div = document.createElement('div')
+  div.className = 'line ' + type
+
+  const p = document.createElement('span')
+  p.className = 'prefix'
+  p.textContent = prefix
+
+  const t = document.createElement('span')
+  t.className = 'text'
+  t.textContent = text
+
+  div.appendChild(p)
+  div.appendChild(t)
+
+  if (showTime) {
+    const ts = document.createElement('span')
+    ts.className = 'ts'
+    ts.textContent = new Date().toLocaleTimeString()
+    div.appendChild(ts)
+  }
+
+  feed.appendChild(div)
+  feed.scrollTop = feed.scrollHeight
+}
+
+const sys = t => addLine('system', '→', t)
+const err = t => addLine('error',  '✗', t)
+const dim = t => addLine('dim',    '',  t)
+
+// Boot
+dim('Type /help to see available commands.')
+if (!cfg.url) sys('No server set — run /url to connect your Railway agent.')
+
+// ── Settings panel ─────────────────────────────────────────────────────────
+function openPanel() {
+  const c = cfg.colors
+  document.getElementById('cp-border').value = c.border
+  document.getElementById('cp-accent').value = c.accent
+  document.getElementById('cp-you').value    = c.you
+  document.getElementById('cp-agent').value  = c.agent
+  document.getElementById('cp-error').value  = c.error
+  document.getElementById('cp-size').value   = cfg.fontSize
+  document.getElementById('cp-name').value   = cfg.agentName
+  document.getElementById('overlay').classList.add('open')
+}
+
+function closePanel() {
+  cfg.colors.border = document.getElementById('cp-border').value
+  cfg.colors.accent = document.getElementById('cp-accent').value
+  cfg.colors.you    = document.getElementById('cp-you').value
+  cfg.colors.agent  = document.getElementById('cp-agent').value
+  cfg.colors.error  = document.getElementById('cp-error').value
+  cfg.fontSize      = parseInt(document.getElementById('cp-size').value) || 15
+  cfg.agentName     = document.getElementById('cp-name').value.trim() || 'Hermes'
+  applyTheme()
+  saveCfg()
+  document.getElementById('overlay').classList.remove('open')
+  sys('Colors saved.')
+  inputEl.focus()
+}
+
+// Live preview while picking
+;['border','accent','you','agent','error'].forEach(k => {
+  document.getElementById('cp-' + k).addEventListener('input', e => {
+    cfg.colors[k] = e.target.value
+    applyTheme()
+  })
+})
+
+// Close on backdrop click
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target.id === 'overlay') closePanel()
+})
+
+// ── Send to Hermes ─────────────────────────────────────────────────────────
+async function sendMsg(message) {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, url: cfg.url })
+  })
+  if (!res.ok) {
+    const t = await res.text().catch(() => '')
+    throw new Error(`HTTP ${res.status}: ${t || res.statusText}`)
+  }
+  const data = await res.json()
+  return (
+    typeof data === 'string'            ? data :
+    data.response                       ?? data.message ??
+    data.text                           ?? data.content ??
+    data.choices?.[0]?.message?.content ??
+    JSON.stringify(data)
+  )
+}
+
+// ── Input handler ──────────────────────────────────────────────────────────
+let busy = false
+
+inputEl.addEventListener('keydown', async e => {
+  if (e.key !== 'Enter' || busy) return
+  const text = inputEl.value.trim()
+  if (!text) return
+  inputEl.value = ''
+
+  // Commands
+  if (text === '/help') {
+    dim('')
+    dim('  /url [address]   set your Railway server URL')
+    dim('  /colors          open color & style settings')
+    dim('  /clear           clear the screen')
+    dim('  /help            show this help')
+    dim('')
+    return
+  }
+
+  if (text === '/colors') { openPanel(); return }
+
+  if (text === '/clear') { feed.innerHTML = ''; return }
+
+  if (text.startsWith('/url')) {
+    const parts = text.split(/\s+/)
+    if (parts.length > 1) {
+      cfg.url = parts.slice(1).join(' ').trim()
+    } else {
+      const v = prompt('Full Railway endpoint URL\n(e.g. https://hermes.up.railway.app/chat)', cfg.url)
+      if (v === null) return
+      cfg.url = v.trim()
+    }
+    saveCfg()
+    sys(cfg.url ? `Server: ${cfg.url}` : 'Server URL cleared.')
+    return
+  }
+
+  // Unknown command
+  if (text.startsWith('/')) {
+    err(`Unknown command: ${text}. Type /help for a list.`)
+    return
+  }
+
+  // Message to Hermes
+  if (!cfg.url) { err('No server set — run /url first.'); return }
+
+  addLine('you', 'You ›', text)
+  busy = true
+  inputEl.disabled = true
+  typingEl.classList.add('show')
+
+  try {
+    const reply = await sendMsg(text)
+    addLine('agent', cfg.agentName + ' ›', reply, true)
+  } catch (e) {
+    err(e.message)
+  } finally {
+    busy = false
+    inputEl.disabled = false
+    typingEl.classList.remove('show')
+    inputEl.focus()
+  }
+})
+</script>
+</body>
+</html>
