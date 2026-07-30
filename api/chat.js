@@ -26,12 +26,12 @@ export default async function handler(req, res) {
 
     const ct = upstream.headers.get('content-type') || ''
     if (ct.includes('text/html')) {
-      return res.status(401).json({ error: 'Auth failed — check your API key.' })
+      return res.status(502).json({ error: `Got HTML from ${base}/v1/chat/completions (status ${upstream.status}) — route may not exist on this port, or Bearer auth failed.` })
     }
 
     if (!upstream.ok) {
       const t = await upstream.text().catch(() => '')
-      return res.status(upstream.status).json({ error: `Upstream error ${upstream.status}: ${t || upstream.statusText}` })
+      return res.status(upstream.status).json({ error: `HTTP ${upstream.status} from upstream: ${t || upstream.statusText}` })
     }
 
     const data = await upstream.json()
