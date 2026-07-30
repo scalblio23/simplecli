@@ -47,7 +47,10 @@ body {
   max-width: 92vw;
 }
 #auth-logo {
-  color: var(--c-agent);
+  background: linear-gradient(to bottom, #FFD700 0%, #F5A623 35%, #C4780A 65%, #8B4210 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   font-size: 0.72em;
   line-height: 1.2;
   white-space: pre;
@@ -314,7 +317,7 @@ const SKINS = [
   {
     id: 'hermes-default',
     name: 'Hermes Default',
-    colors: { bg: '#0a0e1a', border: '#f5a623', accent: '#ff6b35', you: '#4ade80', agent: '#ffd700', error: '#ff4444' },
+    colors: { bg: '#000000', border: '#0A1B1C', accent: '#ff6b35', you: '#4ade80', agent: '#ffd700', error: '#ff4444' },
     fontSize: 15
   },
   {
@@ -430,16 +433,39 @@ const err = t => addLine('error',  '✗', t)
 const dim = t => addLine('dim',    '',  t)
 
 // ── Banner ───────────────────────────────────────────────────────────────────
+const LOGO_ART = [
+  '  ██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗',
+  '  ██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝',
+  '  ███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗',
+  '  ██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║',
+  '  ██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║',
+  '  ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝',
+]
+
+function addGradientLogo() {
+  const wrapper = document.createElement('div')
+  wrapper.className = 'line'
+  const pre = document.createElement('pre')
+  pre.style.cssText = [
+    'background:linear-gradient(to bottom,#FFD700 0%,#F5A623 35%,#C4780A 65%,#8B4210 100%)',
+    '-webkit-background-clip:text',
+    'background-clip:text',
+    '-webkit-text-fill-color:transparent',
+    'color:transparent',
+    'font-size:0.78em',
+    'line-height:1.2',
+    'font-family:inherit',
+    'margin:0',
+    'white-space:pre',
+  ].join(';')
+  pre.textContent = LOGO_ART.join('\n')
+  wrapper.appendChild(pre)
+  feed.appendChild(wrapper)
+  feed.scrollTop = feed.scrollHeight
+}
+
 function showBanner(info) {
-  const art = [
-    '  ██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗',
-    '  ██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝',
-    '  ███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗',
-    '  ██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║',
-    '  ██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║',
-    '  ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝',
-  ]
-  art.forEach(line => addLine('logo', '', line))
+  addGradientLogo()
   dim('')
   dim('  ⚡ Nous Research · Messenger of the Digital Gods')
   if (info) {
