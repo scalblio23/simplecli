@@ -248,8 +248,14 @@ body {
   margin: 4px 0;
 }
 
-#typing { display: none; color: var(--c-dim); padding: 4px 16px; font-size: 0.8em; }
+#typing { display: none; color: var(--c-dim); padding: 4px 16px; font-size: 0.8em; font-style: italic; }
 #typing.show { display: block; }
+.stream-cursor::after {
+  content: '▋';
+  animation: cur-blink 0.6s step-end infinite;
+  color: var(--c-agent);
+}
+@keyframes cur-blink { 50% { opacity: 0; } }
 
 /* ── Input ── */
 #input-wrap {
@@ -800,20 +806,108 @@ function closePanel() {
 
 document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closePanel() })
 
+// ── Typing indicator ─────────────────────────────────────────────────────────
+const THINKING_MSGS = [
+  'Connecting to Hermes',
+  'Hermes is thinking',
+  'Calling external tools',
+  'Querying services',
+  'Processing results',
+  'Composing response',
+  'Almost there',
+]
+let _typingSecTimer = null, _typingMsgTimer = null, _typingStart = 0, _typingMsgIdx = 0, _typingOverride = null
+
+function startTyping() {
+  _typingStart = Date.now(); _typingMsgIdx = 0; _typingOverride = null
+  typingEl.classList.add('show')
+  _tickTyping()
+  _typingSecTimer = setInterval(_tickTyping, 1000)
+  _typingMsgTimer = setInterval(() => {
+    if (!_typingOverride && _typingMsgIdx < THINKING_MSGS.length - 1) _typingMsgIdx++
+    _tickTyping()
+  }, 5000)
+}
+function _tickTyping() {
+  const s = Math.floor((Date.now() - _typingStart) / 1000)
+  typingEl.textContent = (_typingOverride || THINKING_MSGS[_typingMsgIdx]) + '… ' + s + 's'
+}
+function setTypingStatus(msg) { _typingOverride = msg; _tickTyping() }
+function stopTyping() {
+  clearInterval(_typingSecTimer); clearInterval(_typingMsgTimer)
+  _typingSecTimer = _typingMsgTimer = null
+  typingEl.classList.remove('show'); typingEl.textContent = ''
+}
+
+// ── Streaming line helpers ────────────────────────────────────────────────────
+function addStreamLine(prefix) {
+  const div = document.createElement('div'); div.className = 'line agent'
+  const p = document.createElement('span'); p.className = 'prefix'; p.textContent = prefix
+  const t = document.createElement('span'); t.className = 'text stream-cursor'
+  div.appendChild(p); div.appendChild(t)
+  feed.appendChild(div); feed.scrollTop = feed.scrollHeight
+  return div
+}
+function updateStreamLine(el, text) {
+  el.querySelector('.text').textContent = text
+  feed.scrollTop = feed.scrollHeight
+}
+function finalizeStreamLine(el) {
+  const t = el.querySelector('.text'); t.classList.remove('stream-cursor')
+  const ts = document.createElement('span'); ts.className = 'ts'
+  ts.textContent = new Date().toLocaleTimeString(); el.appendChild(ts)
+  feed.scrollTop = feed.scrollHeight
+}
+
 // ── Send ──────────────────────────────────────────────────────────────────────
-async function sendMsg(message, history) {
+async function sendMsg(message, history, onChunk, onStatus) {
   const res = await fetch('/api/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, history, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName, metaToken: cfg.metaToken || undefined, notionToken: cfg.notionToken || undefined, calendlyToken: cfg.calendlyToken || undefined })
   })
-  if (!res.ok) {
-    const d = await res.json().catch(() => ({}))
-    if (res.status === 504 || res.status === 408 || res.status === 524)
-      throw new Error('Request timed out — Hermes is still working or the task was too long. Your message was NOT saved to history; please resend it.')
-    throw new Error(d.error || `HTTP ${res.status}`)
+
+  const ct = res.headers.get('content-type') || ''
+
+  if (!ct.includes('text/event-stream')) {
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      if (res.status === 504 || res.status === 408 || res.status === 524)
+        throw new Error('Request timed out — please resend your message.')
+      throw new Error(d.error || `HTTP ${res.status}`)
+    }
+    const data = await res.json()
+    return data.response ?? JSON.stringify(data)
   }
-  const data = await res.json()
-  return data.response ?? JSON.stringify(data)
+
+  const reader = res.body.getReader()
+  const dec = new TextDecoder()
+  let full = '', buf = '', activeToolName = null
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += dec.decode(value, { stream: true })
+    const lines = buf.split('\n'); buf = lines.pop() ?? ''
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const raw = line.slice(6).trim()
+      if (raw === '[DONE]') continue
+      let parsed; try { parsed = JSON.parse(raw) } catch { continue }
+      const delta = parsed.choices?.[0]?.delta
+      if (!delta) continue
+      const toolCalls = delta.tool_calls
+      if (toolCalls?.length) {
+        const tn = toolCalls[0]?.function?.name
+        if (tn && tn !== activeToolName) { activeToolName = tn; onStatus?.('Using tool: ' + tn) }
+      }
+      if (delta.content) {
+        if (activeToolName) { activeToolName = null; onStatus?.(null) }
+        full += delta.content
+        onChunk?.(full)
+      }
+    }
+  }
+  return full
 }
 
 // ── Chat history ─────────────────────────────────────────────────────────────
@@ -916,15 +1010,31 @@ inputEl.addEventListener('keydown', async e => {
   if (!cfg.apiKey) { err('No API key — click SETTINGS');    return }
 
   addLine('you', 'You ›', text)
-  busy = true; inputEl.disabled = true; typingEl.classList.add('show')
+  busy = true; inputEl.disabled = true
+  startTyping()
+  let streamEl = null
   try {
-    const reply = await sendMsg(text, history)
+    const reply = await sendMsg(text, history,
+      partial => {
+        if (!streamEl) { stopTyping(); streamEl = addStreamLine(cfg.agentName + ' ›') }
+        updateStreamLine(streamEl, partial)
+      },
+      status => { if (status) setTypingStatus(status); else { _typingOverride = null; _tickTyping() } }
+    )
     history.push({ role: 'user', content: text })
     history.push({ role: 'assistant', content: reply })
-    addLine('agent', cfg.agentName + ' ›', reply, true)
+    if (streamEl) { finalizeStreamLine(streamEl) }
+    else { stopTyping(); addLine('agent', cfg.agentName + ' ›', reply, true) }
     saveSession()
-  } catch (e) { err(e.message) }
-  finally { busy = false; inputEl.disabled = false; typingEl.classList.remove('show'); inputEl.focus() }
+  } catch (e) {
+    stopTyping()
+    if (streamEl) streamEl.remove()
+    let msg = e.message
+    if (!msg || msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('network'))
+      msg = 'Connection failed — could not reach the server. Check your network or Railway URL.'
+    err(msg)
+  }
+  finally { busy = false; inputEl.disabled = false; stopTyping(); inputEl.focus() }
 })
 </script>
 </body>
