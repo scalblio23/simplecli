@@ -248,6 +248,28 @@ body {
   margin: 4px 0;
 }
 
+/* ── Bump prompt ── */
+.bump-card {
+  border: 1px solid var(--c-accent);
+  background: rgba(0,0,0,0.3);
+  padding: 10px 16px;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.bump-text { color: var(--c-accent); font-size: 0.82em; flex: 1; }
+.bump-btns { display: flex; gap: 8px; flex-shrink: 0; }
+.bump-yes, .bump-no {
+  background: none; border: 1px solid; font-family: inherit;
+  font-size: 0.72em; letter-spacing: 1px; padding: 4px 10px; cursor: pointer;
+}
+.bump-yes { border-color: var(--c-accent); color: var(--c-accent); }
+.bump-yes:hover { background: var(--c-accent); color: #000; }
+.bump-no { border-color: #444; color: #666; }
+.bump-no:hover { border-color: #666; color: #888; }
+
 #typing { display: none; color: var(--c-dim); padding: 4px 16px; font-size: 0.8em; font-style: italic; }
 #typing.show { display: block; }
 .stream-cursor::after {
@@ -819,6 +841,24 @@ const THINKING_MSGS = [
   'Almost there',
 ]
 let _typingSecTimer = null, _typingMsgTimer = null, _typingStart = 0, _typingMsgIdx = 0, _typingOverride = null
+let _bumpTimer = null, _bumpCard = null
+let _bumpRequested = false, currentAbortCtrl = null
+
+function showBumpPrompt(onYes, onNo) {
+  if (_bumpCard) return
+  const card = document.createElement('div'); card.className = 'bump-card'
+  const txt = document.createElement('span'); txt.className = 'bump-text'
+  txt.textContent = '⏳ Hermes has been thinking for 2 minutes. Send "?" to bump it?'
+  const btns = document.createElement('div'); btns.className = 'bump-btns'
+  const yes = document.createElement('button'); yes.className = 'bump-yes'; yes.textContent = 'YES, BUMP'
+  const no  = document.createElement('button'); no.className  = 'bump-no';  no.textContent  = 'NO, KEEP WAITING'
+  yes.addEventListener('click', () => { dismissBumpPrompt(); onYes() })
+  no.addEventListener('click',  () => { dismissBumpPrompt(); onNo()  })
+  btns.appendChild(yes); btns.appendChild(no)
+  card.appendChild(txt); card.appendChild(btns)
+  _bumpCard = card; feed.appendChild(card); feed.scrollTop = feed.scrollHeight
+}
+function dismissBumpPrompt() { if (_bumpCard) { _bumpCard.remove(); _bumpCard = null } }
 
 function startTyping() {
   _typingStart = Date.now(); _typingMsgIdx = 0; _typingOverride = null
@@ -829,6 +869,10 @@ function startTyping() {
     if (!_typingOverride && _typingMsgIdx < THINKING_MSGS.length - 1) _typingMsgIdx++
     _tickTyping()
   }, 5000)
+  _bumpTimer = setTimeout(() => showBumpPrompt(
+    () => { _bumpRequested = true; if (currentAbortCtrl) currentAbortCtrl.abort() },
+    () => {}
+  ), 120000)
 }
 function _tickTyping() {
   const s = Math.floor((Date.now() - _typingStart) / 1000)
@@ -836,9 +880,10 @@ function _tickTyping() {
 }
 function setTypingStatus(msg) { _typingOverride = msg; _tickTyping() }
 function stopTyping() {
-  clearInterval(_typingSecTimer); clearInterval(_typingMsgTimer)
-  _typingSecTimer = _typingMsgTimer = null
+  clearInterval(_typingSecTimer); clearInterval(_typingMsgTimer); clearTimeout(_bumpTimer)
+  _typingSecTimer = _typingMsgTimer = _bumpTimer = null
   typingEl.classList.remove('show'); typingEl.textContent = ''
+  dismissBumpPrompt()
 }
 
 // ── Streaming line helpers ────────────────────────────────────────────────────
@@ -862,9 +907,9 @@ function finalizeStreamLine(el) {
 }
 
 // ── Send ──────────────────────────────────────────────────────────────────────
-async function sendMsg(message, history, onChunk, onStatus) {
+async function sendMsg(message, history, onChunk, onStatus, signal) {
   const res = await fetch('/api/chat', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', signal, headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, history, url: cfg.url, apiKey: cfg.apiKey, modelName: cfg.modelName, metaToken: cfg.metaToken || undefined, notionToken: cfg.notionToken || undefined, calendlyToken: cfg.calendlyToken || undefined })
   })
 
@@ -1005,6 +1050,50 @@ inputEl.addEventListener('input', () => {
 })
 
 let busy = false
+
+async function doSend(text) {
+  if (busy) return
+  if (!cfg.url)    { err('No server set — click SETTINGS'); return }
+  if (!cfg.apiKey) { err('No API key — click SETTINGS');    return }
+
+  addLine('you', 'You ›', text)
+  busy = true; inputEl.disabled = true
+  startTyping()
+
+  const abortCtrl = new AbortController()
+  currentAbortCtrl = abortCtrl
+  let streamEl = null
+
+  try {
+    const reply = await sendMsg(text, history,
+      partial => {
+        if (!streamEl) { stopTyping(); streamEl = addStreamLine(cfg.agentName + ' ›') }
+        updateStreamLine(streamEl, partial)
+      },
+      status => { if (status) setTypingStatus(status); else { _typingOverride = null; _tickTyping() } },
+      abortCtrl.signal
+    )
+    history.push({ role: 'user', content: text })
+    history.push({ role: 'assistant', content: reply })
+    if (streamEl) { finalizeStreamLine(streamEl) }
+    else { stopTyping(); addLine('agent', cfg.agentName + ' ›', reply, true) }
+    saveSession()
+  } catch (e) {
+    stopTyping()
+    if (streamEl) streamEl.remove()
+    if (e.name === 'AbortError') {
+      if (_bumpRequested) { _bumpRequested = false; setTimeout(() => doSend('?'), 50) }
+      return
+    }
+    let msg = e.message
+    if (!msg || msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('network'))
+      msg = 'Connection failed — could not reach the server. Check your network or Railway URL.'
+    err(msg)
+  } finally {
+    busy = false; inputEl.disabled = false; currentAbortCtrl = null; stopTyping(); inputEl.focus()
+  }
+}
+
 inputEl.addEventListener('keydown', async e => {
   if (e.key !== 'Enter' || e.shiftKey || busy) return
   e.preventDefault()
@@ -1020,35 +1109,7 @@ inputEl.addEventListener('keydown', async e => {
   if (text === '/clear')    { clearScreen();           return }
   if (text.startsWith('/')) { err(`Unknown command: ${text}. Type /help.`); return }
 
-  if (!cfg.url)    { err('No server set — click SETTINGS'); return }
-  if (!cfg.apiKey) { err('No API key — click SETTINGS');    return }
-
-  addLine('you', 'You ›', text)
-  busy = true; inputEl.disabled = true
-  startTyping()
-  let streamEl = null
-  try {
-    const reply = await sendMsg(text, history,
-      partial => {
-        if (!streamEl) { stopTyping(); streamEl = addStreamLine(cfg.agentName + ' ›') }
-        updateStreamLine(streamEl, partial)
-      },
-      status => { if (status) setTypingStatus(status); else { _typingOverride = null; _tickTyping() } }
-    )
-    history.push({ role: 'user', content: text })
-    history.push({ role: 'assistant', content: reply })
-    if (streamEl) { finalizeStreamLine(streamEl) }
-    else { stopTyping(); addLine('agent', cfg.agentName + ' ›', reply, true) }
-    saveSession()
-  } catch (e) {
-    stopTyping()
-    if (streamEl) streamEl.remove()
-    let msg = e.message
-    if (!msg || msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('network'))
-      msg = 'Connection failed — could not reach the server. Check your network or Railway URL.'
-    err(msg)
-  }
-  finally { busy = false; inputEl.disabled = false; stopTyping(); inputEl.focus() }
+  await doSend(text)
 })
 </script>
 </body>
